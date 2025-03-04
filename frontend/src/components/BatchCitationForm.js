@@ -1,39 +1,64 @@
 import React, { useState } from 'react';
 import {
+  Container,
   Paper,
   TextField,
-  FormControl,
-  InputLabel,
+  Button,
   Select,
   MenuItem,
-  Box,
+  FormControl,
+  InputLabel,
   Typography,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
+  Box,
+  Alert,
+  CircularProgress,
+  Card,
+  CardContent,
   IconButton,
   Tooltip,
-  Divider,
-  LinearProgress
+  useTheme,
+  Divider
 } from '@mui/material';
-import LoadingButton from '@mui/lab/LoadingButton';
-import {
-  ContentCopy as CopyIcon,
-  Download as DownloadIcon,
-  Upload as UploadIcon
-} from '@mui/icons-material';
-import axios from 'axios';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import { styled } from '@mui/material/styles';
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(4),
+  marginTop: theme.spacing(4),
+  borderRadius: theme.spacing(2),
+  boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+  background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
+}));
+
+const StyledCard = styled(Card)(({ theme }) => ({
+  marginTop: theme.spacing(3),
+  borderRadius: theme.spacing(2),
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+  border: '1px solid rgba(0,0,0,0.08)',
+  background: '#ffffff',
+}));
+
+const StyledButton = styled(Button)(({ theme }) => ({
+  borderRadius: theme.spacing(1),
+  padding: '10px 24px',
+  textTransform: 'none',
+  fontWeight: 600,
+  boxShadow: 'none',
+  '&:hover': {
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  },
+}));
 
 const API_URL = process.env.REACT_APP_API_URL;
 
 const BatchCitationForm = ({ onCitationsGenerated }) => {
+  const theme = useTheme();
   const [style, setStyle] = useState('APA');
   const [urls, setUrls] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [results, setResults] = useState([]);
+  const [citations, setCitations] = useState([]);
   const [progress, setProgress] = useState(0);
 
   const handleUrlsChange = (e) => {
@@ -58,11 +83,11 @@ const BatchCitationForm = ({ onCitationsGenerated }) => {
 
     setLoading(true);
     setError('');
-    setResults([]);
+    setCitations([]);
     setProgress(0);
 
     try {
-      const citations = [];
+      const results = [];
       let completed = 0;
 
       for (const url of urlList) {
@@ -71,7 +96,7 @@ const BatchCitationForm = ({ onCitationsGenerated }) => {
           const metadataResponse = await axios.post(`${API_URL}/api/extract-metadata`, { url });
           
           if (metadataResponse.data.error) {
-            citations.push({
+            results.push({
               url,
               error: metadataResponse.data.error,
               success: false
@@ -87,7 +112,7 @@ const BatchCitationForm = ({ onCitationsGenerated }) => {
             ...metadataResponse.data
           });
 
-          citations.push({
+          results.push({
             url,
             citation: citationResponse.data.citation,
             metadata: metadataResponse.data,
@@ -95,7 +120,7 @@ const BatchCitationForm = ({ onCitationsGenerated }) => {
           });
 
         } catch (error) {
-          citations.push({
+          results.push({
             url,
             error: error.response?.data?.error || error.message,
             success: false
@@ -106,10 +131,11 @@ const BatchCitationForm = ({ onCitationsGenerated }) => {
         setProgress((completed / urlList.length) * 100);
       }
 
-      setResults(citations);
-      onCitationsGenerated(citations.filter(c => c.success).map(c => ({
-        text: c.citation,
-        title: c.metadata?.title || c.url,
+      const citations = results.filter(result => result.success).map(result => result.citation);
+      setCitations(citations);
+      onCitationsGenerated(citations.map(citation => ({
+        text: citation,
+        title: '',
         timestamp: new Date().toISOString()
       })));
 
@@ -124,133 +150,105 @@ const BatchCitationForm = ({ onCitationsGenerated }) => {
     navigator.clipboard.writeText(citation);
   };
 
-  const handleExport = () => {
-    const text = results
-      .map(result => result.success 
-        ? `${result.url}\n${result.citation}\n` 
-        : `${result.url}\nError: ${result.error}\n`)
-      .join('\n');
-
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'citations.txt';
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const handleCopyAll = () => {
+    navigator.clipboard.writeText(citations.join('\n'));
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Batch Citation Generator
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Enter multiple URLs (one per line) to generate citations in bulk
-      </Typography>
+    <Container maxWidth="md">
+      <StyledPaper elevation={0}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, color: '#1a237e' }}>
+          Batch Citation Generator
+        </Typography>
+        <Typography variant="body1" gutterBottom sx={{ color: 'text.secondary', mb: 4 }}>
+          Generate multiple citations at once - perfect for bibliography creation
+        </Typography>
 
-      <Box component="form" onSubmit={handleSubmit}>
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>Citation Style</InputLabel>
-          <Select
-            value={style}
-            onChange={(e) => setStyle(e.target.value)}
-            label="Citation Style"
-          >
-            <MenuItem value="APA">APA 7th Edition</MenuItem>
-            <MenuItem value="MLA">MLA 9th Edition</MenuItem>
-            <MenuItem value="Chicago">Chicago 17th Edition</MenuItem>
-            <MenuItem value="Harvard">Harvard</MenuItem>
-          </Select>
-        </FormControl>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+          <TextField
+            fullWidth
+            label="Enter URLs (one per line)"
+            variant="outlined"
+            multiline
+            rows={4}
+            value={urls}
+            onChange={(e) => setUrls(e.target.value)}
+            sx={{ mb: 3 }}
+            InputProps={{
+              startAdornment: <FormatListBulletedIcon sx={{ mt: 1, mr: 1, color: 'text.secondary' }} />,
+            }}
+          />
 
-        <TextField
-          fullWidth
-          multiline
-          rows={4}
-          label="URLs (one per line)"
-          value={urls}
-          onChange={handleUrlsChange}
-          error={!!error}
-          helperText={error}
-          disabled={loading}
-          sx={{ mb: 2 }}
-        />
-
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-          <LoadingButton
-            type="submit"
-            variant="contained"
-            loading={loading}
-            startIcon={<UploadIcon />}
-            sx={{ flex: 1 }}
-          >
-            Generate Citations
-          </LoadingButton>
-          {results.length > 0 && (
-            <Button
-              variant="outlined"
-              onClick={handleExport}
-              startIcon={<DownloadIcon />}
+          <FormControl fullWidth sx={{ mb: 3 }}>
+            <InputLabel>Citation Style</InputLabel>
+            <Select
+              value={style}
+              onChange={(e) => setStyle(e.target.value)}
+              label="Citation Style"
             >
-              Export
-            </Button>
+              <MenuItem value="APA">APA</MenuItem>
+              <MenuItem value="MLA">MLA</MenuItem>
+              <MenuItem value="Chicago">Chicago</MenuItem>
+              <MenuItem value="Harvard">Harvard</MenuItem>
+            </Select>
+          </FormControl>
+
+          <StyledButton
+            variant="contained"
+            color="primary"
+            type="submit"
+            fullWidth
+            disabled={loading}
+            sx={{ mb: 2 }}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Generate Citations'}
+          </StyledButton>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
           )}
-        </Box>
 
-        {loading && (
-          <Box sx={{ width: '100%', mb: 2 }}>
-            <Typography variant="body2" color="text.secondary" align="center">
-              Processing URLs... {Math.round(progress)}%
-            </Typography>
-            <Box sx={{ width: '100%', mt: 1 }}>
-              <LinearProgress variant="determinate" value={progress} />
-            </Box>
-          </Box>
-        )}
-
-        {results.length > 0 && (
-          <List>
-            {results.map((result, index) => (
-              <React.Fragment key={index}>
-                <ListItem>
-                  <ListItemText
-                    primary={result.success ? 'Success' : 'Error'}
-                    secondary={
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          {result.url}
-                        </Typography>
-                        <Typography
-                          variant="body1"
-                          color={result.success ? 'text.primary' : 'error'}
-                          sx={{ mt: 1 }}
-                        >
-                          {result.success ? result.citation : result.error}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                  {result.success && (
-                    <ListItemSecondaryAction>
+          {citations.length > 0 && (
+            <StyledCard>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6" sx={{ color: theme.palette.primary.main }}>
+                    Generated Citations
+                  </Typography>
+                  <Tooltip title="Copy all citations">
+                    <IconButton onClick={handleCopyAll} size="small">
+                      <ContentCopyIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+                {citations.map((citation, index) => (
+                  <Box key={index} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <Typography variant="body1" component="div" sx={{ flex: 1, pr: 2 }}>
+                        {citation}
+                      </Typography>
                       <Tooltip title="Copy citation">
-                        <IconButton
-                          edge="end"
-                          onClick={() => handleCopy(result.citation)}
+                        <IconButton 
+                          onClick={() => handleCopy(citation)} 
+                          size="small"
+                          sx={{ color: theme.palette.primary.main }}
                         >
-                          <CopyIcon />
+                          <ContentCopyIcon />
                         </IconButton>
                       </Tooltip>
-                    </ListItemSecondaryAction>
-                  )}
-                </ListItem>
-                {index < results.length - 1 && <Divider />}
-              </React.Fragment>
-            ))}
-          </List>
-        )}
-      </Box>
-    </Paper>
+                    </Box>
+                    {index < citations.length - 1 && <Divider sx={{ my: 2 }} />}
+                  </Box>
+                ))}
+              </CardContent>
+            </StyledCard>
+          )}
+        </Box>
+      </StyledPaper>
+    </Container>
   );
 };
 

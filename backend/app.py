@@ -22,6 +22,11 @@ CORS(app, resources={
     }
 })
 
+# Add health check endpoint
+@app.route('/', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy"}), 200
+
 def extract_metadata(url):
     try:
         if not validators.url(url):
@@ -438,5 +443,9 @@ def format_journal_citation(data, style):
 
     return "Citation style not supported"
 
+# For local development
 if __name__ == '__main__':
     app.run(debug=True)
+else:
+    # For Vercel deployment
+    app = app

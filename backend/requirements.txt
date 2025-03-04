@@ -5,3 +5,4 @@ beautifulsoup4
 python-dateutil
 validators
 urllib3
+gunicorn

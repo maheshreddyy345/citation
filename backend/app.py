@@ -9,6 +9,7 @@ import urllib3
 import json
 from urllib.parse import urlparse
 from citation_rules import get_citation_rules, validate_citation, format_citation
+import os
 
 # Disable SSL verification warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -16,7 +17,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 app = Flask(__name__)
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:3000", "https://citation-maheshreddyy345.vercel.app"],
+        "origins": ["http://localhost:3000", "https://citation-frontend.onrender.com"],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
@@ -445,7 +446,8 @@ def format_journal_citation(data, style):
 
 # For local development
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
 else:
-    # For Vercel deployment
+    # For Render deployment
     app = app

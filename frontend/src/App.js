@@ -1,52 +1,61 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  ThemeProvider, 
-  CssBaseline, 
-  Container, 
-  Box, 
-  IconButton, 
-  AppBar, 
-  Toolbar, 
-  Typography,
-  Tabs,
-  Tab,
-  Paper
-} from '@mui/material';
-import { Brightness4, Brightness7 } from '@mui/icons-material';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { CssBaseline, AppBar, Toolbar, Button, Box, Container, Typography } from '@mui/material';
 import CitationForm from './components/CitationForm';
 import BatchCitationForm from './components/BatchCitationForm';
 import CitationHistory from './components/CitationHistory';
-import { getTheme } from './theme';
 
-function TabPanel({ children, value, index }) {
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`citation-tabpanel-${index}`}
-      aria-labelledby={`citation-tab-${index}`}
-    >
-      {value === index && <Box>{children}</Box>}
-    </div>
-  );
-}
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1a237e',
+      light: '#534bae',
+      dark: '#000051',
+    },
+    background: {
+      default: '#f5f5f7',
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 700,
+    },
+    button: {
+      textTransform: 'none',
+      fontWeight: 600,
+    },
+  },
+  shape: {
+    borderRadius: 8,
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          padding: '10px 20px',
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+        },
+      },
+    },
+  },
+});
 
 function App() {
-  const [mode, setMode] = useState(() => localStorage.getItem('themeMode') || 'light');
   const [citations, setCitations] = useState(() => {
     const saved = localStorage.getItem('citationHistory');
     return saved ? JSON.parse(saved) : [];
   });
-  const [tabValue, setTabValue] = useState(0);
-  const theme = getTheme(mode);
-
-  useEffect(() => {
-    localStorage.setItem('themeMode', mode);
-  }, [mode]);
-
-  useEffect(() => {
-    localStorage.setItem('citationHistory', JSON.stringify(citations));
-  }, [citations]);
 
   const handleCitationGenerated = (citation) => {
     const newCitation = {
@@ -69,56 +78,65 @@ function App() {
     navigator.clipboard.writeText(citation.text);
   };
 
-  const toggleColorMode = () => {
-    setMode(prevMode => prevMode === 'light' ? 'dark' : 'light');
-  };
-
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
+  useEffect(() => {
+    localStorage.setItem('citationHistory', JSON.stringify(citations));
+  }, [citations]);
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppBar position="static" color="default" elevation={1}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Citation Generator
-          </Typography>
-          <IconButton onClick={toggleColorMode} color="inherit">
-            {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-      <Container maxWidth="md">
-        <Box sx={{ my: 4 }}>
-          <Paper sx={{ mb: 3 }}>
-            <Tabs
-              value={tabValue}
-              onChange={handleTabChange}
-              aria-label="citation tabs"
-              variant="fullWidth"
-            >
-              <Tab label="Single Citation" />
-              <Tab label="Batch Citations" />
-            </Tabs>
-          </Paper>
+      <Router>
+        <AppBar position="sticky" color="transparent">
+          <Container maxWidth="lg">
+            <Toolbar sx={{ px: { xs: 0 } }}>
+              <Typography 
+                variant="h6" 
+                component={Link} 
+                to="/" 
+                sx={{ 
+                  color: 'primary.main', 
+                  textDecoration: 'none',
+                  fontWeight: 700,
+                  flexGrow: 1 
+                }}
+              >
+                Citation Generator
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  component={Link}
+                  to="/"
+                  color="primary"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Single Citation
+                </Button>
+                <Button
+                  component={Link}
+                  to="/batch"
+                  color="primary"
+                  variant="contained"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Batch Citations
+                </Button>
+              </Box>
+            </Toolbar>
+          </Container>
+        </AppBar>
 
-          <TabPanel value={tabValue} index={0}>
-            <CitationForm onCitationGenerated={handleCitationGenerated} />
-          </TabPanel>
-
-          <TabPanel value={tabValue} index={1}>
-            <BatchCitationForm onCitationsGenerated={handleBatchCitationsGenerated} />
-          </TabPanel>
-
+        <Box sx={{ py: 4 }}>
+          <Routes>
+            <Route path="/" element={<CitationForm onCitationGenerated={handleCitationGenerated} />} />
+            <Route path="/batch" element={<BatchCitationForm onCitationsGenerated={handleBatchCitationsGenerated} />} />
+          </Routes>
           <CitationHistory
             citations={citations}
             onDelete={handleDeleteCitation}
             onCopy={handleCopyCitation}
           />
         </Box>
-      </Container>
+      </Router>
     </ThemeProvider>
   );
 }

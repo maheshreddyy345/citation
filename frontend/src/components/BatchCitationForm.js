@@ -26,6 +26,8 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 const BatchCitationForm = ({ onCitationsGenerated }) => {
   const [style, setStyle] = useState('APA');
   const [urls, setUrls] = useState('');
@@ -66,7 +68,7 @@ const BatchCitationForm = ({ onCitationsGenerated }) => {
       for (const url of urlList) {
         try {
           // First get metadata
-          const metadataResponse = await axios.post('http://localhost:5000/api/extract-metadata', { url });
+          const metadataResponse = await axios.post(`${API_URL}/api/extract-metadata`, { url });
           
           if (metadataResponse.data.error) {
             citations.push({
@@ -78,7 +80,7 @@ const BatchCitationForm = ({ onCitationsGenerated }) => {
           }
 
           // Then generate citation
-          const citationResponse = await axios.post('http://localhost:5000/api/generate-citation', {
+          const citationResponse = await axios.post(`${API_URL}/api/generate-citation`, {
             sourceType: 'website',
             style,
             url,

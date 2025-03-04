@@ -13,6 +13,8 @@ import {
 import LoadingButton from '@mui/lab/LoadingButton';
 import axios from 'axios';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 const CitationForm = ({ onCitationGenerated }) => {
   const [sourceType, setSourceType] = useState('website');
   const [style, setStyle] = useState('APA');
@@ -70,7 +72,7 @@ const CitationForm = ({ onCitationGenerated }) => {
       setLoading(true);
       setError('');
       
-      const response = await axios.post('http://localhost:5000/api/extract-metadata', { url });
+      const response = await axios.post(`${API_URL}/api/extract-metadata`, { url });
       
       if (response.data.error) {
         setError(response.data.error);
@@ -110,7 +112,7 @@ const CitationForm = ({ onCitationGenerated }) => {
     try {
       setLoading(true);
       setError('');
-      const response = await axios.post('http://localhost:5000/api/generate-citation', {
+      const response = await axios.post(`${API_URL}/api/generate-citation`, {
         sourceType,
         style,
         ...formData[sourceType]
